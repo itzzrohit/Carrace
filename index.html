@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rohit's Car Racing Game</title>
+    <style>
+        /* General Styling */
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+
+        .game-area {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: #070000;
+            overflow: hidden;
+        }
+
+        .road {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: black
+            );
+        }
+
+        .road-line {
+            position: absolute;
+            width: 20px;
+            height: 80px;
+            background: white;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: move-lines 1.5s linear infinite;
+        }
+
+        @keyframes move-lines {
+            0% {
+                top: -100px;
+            }
+            100% {
+                top: 100vh;
+            }
+        }
+
+        .player-car {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 100px;
+            background: url('rb_2148010867.png') no-repeat center / contain;
+        }
+
+        .obstacle {
+            position: absolute;
+            width: 80px;
+            height: 100px;
+            background: url('rb_2148010867.png') no-repeat center / contain;
+            top: -120px;
+        }
+
+        .score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 24px;
+        }
+
+        /* Onscreen Controls */
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 60px;
+        }
+
+        .control-btn {
+            width: 50px;
+            height: 50px;
+            background-color: white;
+            border: 2px solid #d80d0d;
+            border-radius: 5px;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            line-height: 50px;
+            cursor: pointer;
+        }
+
+        .control-btn:hover {
+            background-color: #ddd;
+        }
+
+        /* Responsive Styles */
+        @media (max-width: 768px) {
+            .player-car {
+                width: 60px;
+                height: 80px;
+            }
+
+            .obstacle {
+                width: 50px;
+                height: 80px;
+            }
+
+            .control-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 20px;
+                line-height: 40px;
+            }
+
+            .score {
+                font-size: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-area">
+        <div class="road">
+            <!-- Road Lines -->
+            <div class="road-line"></div>
+            <div class="road-line" style="top: 20%;"></div>
+            <div class="road-line" style="top: 40%;"></div>
+            <div class="road-line" style="top: 60%;"></div>
+            <div class="road-line" style="top: 80%;"></div>
+        </div>
+        <div class="player-car"></div>
+        <div class="score">Score: 0</div>
+        <div class="controls">
+            <div class="control-btn" id="left">←</div>
+            <div class="control-btn" id="right">→</div>
+        </div>
+    </div>
+
+    <audio id="collision-sound" src="https://www.soundjay.com/button/beep-07.mp3"></audio>
+    <audio id="score-sound" src="https://www.soundjay.com/button/beep-03.mp3"></audio>
+
+    <script>
+        const gameArea = document.querySelector('.game-area');
+        const playerCar = document.querySelector('.player-car');
+        const scoreElement = document.querySelector('.score');
+        const collisionSound = document.getElementById('collision-sound');
+        const scoreSound = document.getElementById('score-sound');
+        const leftBtn = document.getElementById('left');
+        const rightBtn = document.getElementById('right');
+
+        let gameSpeed = 5;
+        let playerPosition = gameArea.offsetWidth / 2 - 30; // Center the car
+        let obstacles = [];
+        let score = 0;
+
+        // Move player car based on key or button press
+        function moveCar(direction) {
+            if (direction === 'left' && playerPosition > 10) {
+                playerPosition -= 20;
+            }
+            if (direction === 'right' && playerPosition < gameArea.offsetWidth - 70) {
+                playerPosition += 20;
+            }
+            playerCar.style.left = `${playerPosition}px`;
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') moveCar('left');
+            if (e.key === 'ArrowRight') moveCar('right');
+        });
+
+        leftBtn.addEventListener('click', () => moveCar('left'));
+        rightBtn.addEventListener('click', () => moveCar('right'));
+
+        // Generate obstacles
+        function createObstacle() {
+            const obstacle = document.createElement('div');
+            obstacle.classList.add('obstacle');
+            obstacle.style.left = `${Math.random() * (gameArea.offsetWidth - 60)}px`;
+            obstacle.style.top = `-120px`;
+            gameArea.appendChild(obstacle);
+            obstacles.push(obstacle);
+        }
+
+        // Update game state
+        function updateGame() {
+            obstacles.forEach((obstacle, index) => {
+                let obstacleTop = parseFloat(obstacle.style.top);
+                obstacle.style.top = `${obstacleTop + gameSpeed}px`;
+
+                // Check for collision
+                if (
+                    obstacleTop > gameArea.offsetHeight - 120 &&
+                    parseFloat(obstacle.style.left) < playerPosition + 60 &&
+                    parseFloat(obstacle.style.left) + 60 > playerPosition
+                ) {
+                    collisionSound.play();
+                    alert(`Game Over! Your Score: ${score}`);
+                    window.location.reload();
+                }
+
+                // Remove passed obstacles and update score
+                if (obstacleTop > gameArea.offsetHeight) {
+                    obstacle.remove();
+                    obstacles.splice(index, 1);
+                    score += 10;
+                    scoreSound.play();
+                    scoreElement.textContent = `Score: ${score}`;
+                }
+            });
+
+            // Speed up the game over time
+            if (score % 100 === 0 && score > 0) {
+                gameSpeed += 0.2;
+            }
+        }
+
+        // Game loop
+        function gameLoop() {
+            updateGame();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start the game
+        setInterval(createObstacle, 1000);
+        gameLoop();
+    </script>
+</body>
+</html>
